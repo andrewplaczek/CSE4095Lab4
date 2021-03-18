@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final String TAG = "MAIN__";
     private MediaPlayer mediaPlayer;
-    private static final String url = "http://vprbbc.streamguys.net:80/vprbbc24.mp3";
+    private static final String url = "http://stream.whus.org:8000/whusfm"; //";//http://vprbbc.streamguys.net:80/vprbbc24.mp3";
     private Button internetRadioButton;
 
     @Override
@@ -102,6 +102,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setUpMediaPlayer() {
-        
+        Handler handler = null;
+
+
+
+        HandlerThread handlerThread = new HandlerThread("media player") {
+            @Override
+            public void onLooperPrepared() {
+                Log.i(TAG, "onLooperPrepared");
+
+            }
+        };
+
     }
 }
