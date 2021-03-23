@@ -1,7 +1,9 @@
 package me.pgb.a2021_03_17_radio;
 
 import android.media.AudioAttributes;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -14,6 +16,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
 
@@ -29,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
     private static final String url = "http://stream.whus.org:8000/whusfm"; //";//http://vprbbc.streamguys.net:80/vprbbc24.mp3";
     private Button internetRadioButton;
+    private boolean radioOn;
+    private boolean radioWasOnBefore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,37 +42,81 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        radioOn = false;
+        radioWasOnBefore = false;
+
+        mediaPlayer = new MediaPlayer();
+
         internetRadioButton = findViewById(R.id.internet_radio_button);
 
         internetRadioButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                mediaPlayer = new MediaPlayer();
-
-                mediaPlayer.setAudioAttributes(
-                        new AudioAttributes.Builder()
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .build()
-                );
-
-                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                    @Override
-                    public void onPrepared(MediaPlayer mp) {
-                        mediaPlayer.start();
+                if (radioOn) { // ON so Turn OFF
+                    radioOn = false;
+                    internetRadioButton.setText("Turn radio ON");
+                    if (mediaPlayer.isPlaying()) {
+                        Log.i(TAG, "Radio is playing- turning off " );
+                        radioWasOnBefore = true;
                     }
-                });
-
-                try {
-                    mediaPlayer.setDataSource(url);
-                    mediaPlayer.prepareAsync();
-
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    mediaPlayer.pause();
+                } else { // OFF so Turn ON
+                    radioOn = true;
+                    internetRadioButton.setText("Turn radio OFF");
+                    if (!mediaPlayer.isPlaying()) {
+                        if (radioWasOnBefore) {
+                            mediaPlayer.release();
+                            mediaPlayer = new MediaPlayer();
+                        }
+                        radioSetup(mediaPlayer);
+                        mediaPlayer.prepareAsync();
+                    }
                 }
+
             }
         });
+    }
+
+    public void radioSetup(MediaPlayer mediaPlayer) {
+
+        mediaPlayer.setAudioAttributes(
+                new AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+        );
+
+        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                Log.i(TAG, "onPrepared" );
+                mediaPlayer.start();
+            }
+        });
+
+        mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer mp, int what, int extra) {
+                Log.i(TAG, "onError: " + String.valueOf(what).toString());
+                return false;
+            }
+        });
+
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                Log.i(TAG, "onCompletion" );
+                mediaPlayer.reset();
+            }
+        });
+
+        try {
+            mediaPlayer.setDataSource(url);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -103,8 +152,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setUpMediaPlayer() {
         Handler handler = null;
-
-
 
         HandlerThread handlerThread = new HandlerThread("media player") {
             @Override
